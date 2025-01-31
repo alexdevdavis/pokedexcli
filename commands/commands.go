@@ -43,6 +43,7 @@ func getCommands() map[string]cliCommand {
 }
 
 func commandHelp() error {
+	fmt.Println()
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Printf("Usage:\n\n")
 	commands := getCommands()
