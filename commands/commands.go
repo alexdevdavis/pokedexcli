@@ -3,6 +3,8 @@ package commands
 import (
 	"fmt"
 	"os"
+
+	"github.com/alexdevdavis/pokedexcli/pokeapi"
 )
 
 type cliCommand struct {
@@ -35,11 +37,30 @@ func init() {
 			description: "Displays a help message",
 			callback:    commandHelp,
 		},
+		"map": {
+			name:        "map",
+			description: "Displays a list of map areas",
+			callback:    commandMap,
+		},
 	}
 }
 func getCommands() map[string]cliCommand {
 
 	return commandsRegistry
+}
+
+func commandMap() error {
+	fmt.Printf("\n🗺️ Fetching Location Areas...\n\n")
+	pokeClient := pokeapi.NewPokeClient()
+	locationAreas, err := pokeClient.LocationAreas()
+	if err != nil {
+		return err
+	}
+	for _, location := range locationAreas.Results {
+		fmt.Printf("📍 Location name: %s — with url: %s\n", location.Name, location.Url)
+	}
+	fmt.Println()
+	return nil
 }
 
 func commandHelp() error {
