@@ -4,21 +4,22 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/alexdevdavis/pokedexcli/config"
 	"github.com/alexdevdavis/pokedexcli/pokeapi"
 )
 
 type cliCommand struct {
 	name        string
 	description string
-	callback    func() error
+	callback    func(*config.Config) error
 }
 
-func ExecuteCommand(command string) error {
+func ExecuteCommand(command string, cfg *config.Config) error {
 	cmd, exists := getCommands()[command]
 	if !exists {
 		return fmt.Errorf("Unknown command")
 	}
-	err := cmd.callback()
+	err := cmd.callback(cfg)
 	return err
 }
 
@@ -49,13 +50,23 @@ func getCommands() map[string]cliCommand {
 	return commandsRegistry
 }
 
-func commandMap() error {
+func commandMap(cfg *config.Config) error {
 	fmt.Printf("\n🗺️ Fetching Location Areas...\n\n")
 	pokeClient := pokeapi.NewPokeClient()
-	locationAreas, err := pokeClient.LocationAreas()
+	if cfg.Next == nil && cfg.Previous != nil {
+		fmt.Printf("\n🚧 There are no further location areas to display\n\n")
+		return nil
+	}
+	locationAreas, err := pokeClient.LocationAreas(cfg.Next)
 	if err != nil {
 		return err
 	}
+	if len(locationAreas.Results) == 0 {
+		fmt.Printf("\nThere are no further location areas to display\n\n")
+		return nil
+	}
+	cfg.Next = locationAreas.Next
+	cfg.Previous = locationAreas.Previous
 	for _, location := range locationAreas.Results {
 		fmt.Printf("📍 Location name: %s — with url: %s\n", location.Name, location.Url)
 	}
@@ -63,7 +74,7 @@ func commandMap() error {
 	return nil
 }
 
-func commandHelp() error {
+func commandHelp(cfg *config.Config) error {
 	fmt.Println()
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Printf("Usage:\n\n")
@@ -75,7 +86,7 @@ func commandHelp() error {
 	return nil
 }
 
-func commandExit() error {
+func commandExit(cfg *config.Config) error {
 	fmt.Print("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
