@@ -40,8 +40,13 @@ func init() {
 		},
 		"map": {
 			name:        "map",
-			description: "Displays a list of map areas",
+			description: "Displays a list of 20 location areas",
 			callback:    commandMap,
+		},
+		"mapb": {
+			name:        "mapb",
+			description: "Displays the previous page of 20 location areas",
+			callback:    commandMapb,
 		},
 	}
 }
@@ -50,13 +55,35 @@ func getCommands() map[string]cliCommand {
 	return commandsRegistry
 }
 
-func commandMap(cfg *config.Config) error {
-	fmt.Printf("\n🗺️ Fetching Location Areas...\n\n")
+func commandMapb(cfg *config.Config) error {
+	if cfg.Previous == nil {
+		fmt.Printf("\n\nYou're on the first page\n\n")
+		return nil
+	}
 	pokeClient := pokeapi.NewPokeClient()
+	locationAreas, err := pokeClient.LocationAreas(cfg.Previous)
+	if err != nil {
+		return err
+	}
+	if len(locationAreas.Results) == 0 {
+		fmt.Printf("\nThere are no further location areas to display\n\n")
+		return nil
+	}
+	cfg.Next = locationAreas.Next
+	cfg.Previous = locationAreas.Previous
+	printLocationData(locationAreas.Results)
+	return nil
+
+}
+
+func commandMap(cfg *config.Config) error {
 	if cfg.Next == nil && cfg.Previous != nil {
 		fmt.Printf("\n🚧 There are no further location areas to display\n\n")
 		return nil
 	}
+	fmt.Printf("\n🗺️ Fetching Location Areas...\n\n")
+	pokeClient := pokeapi.NewPokeClient()
+
 	locationAreas, err := pokeClient.LocationAreas(cfg.Next)
 	if err != nil {
 		return err
@@ -67,10 +94,7 @@ func commandMap(cfg *config.Config) error {
 	}
 	cfg.Next = locationAreas.Next
 	cfg.Previous = locationAreas.Previous
-	for _, location := range locationAreas.Results {
-		fmt.Printf("📍 Location name: %s — with url: %s\n", location.Name, location.Url)
-	}
-	fmt.Println()
+	printLocationData(locationAreas.Results)
 	return nil
 }
 
@@ -90,5 +114,12 @@ func commandExit(cfg *config.Config) error {
 	fmt.Print("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
+}
+
+func printLocationData(locationAreas []pokeapi.LocationArea) {
+	for _, location := range locationAreas {
+		fmt.Printf("📍 Location name: %s — with url: %s\n", location.Name, location.Url)
+	}
+	fmt.Println()
 
 }
